@@ -39,8 +39,8 @@ def last1bit(b):
     """ Return index of highest order bit that is on """
     return 0 if b==0 else 1+last1bit(b>>1)
 
-def stateeq(state1, state2):
-    return (state1.lm_state == state2.lm_state) and (state1.end == state2.end) and (state1.coverage == state2.coverage)
+# def stateeq(state1, state2):
+#     return (state1.lm_state == state2.lm_state) and (state1.end == state2.end) and (state1.coverage == state2.coverage)
 
 def main():
     # tm should translate unknown words as-is with probability 1
@@ -56,10 +56,10 @@ def main():
         heaps[0][lm.begin()] = initial_hypothesis
         for i, heap in enumerate(heaps[:-1]):
             # maintain beam heap
-            front_item = sorted(heap.itervalues(), key=lambda h: -h.logprob)[0]
-            for k in heap.keys():
-                 if heap[k].logprob < front_item.logprob - bound_width:
-                    del heap[k]
+            # front_item = sorted(heap.itervalues(), key=lambda h: -h.logprob)[0]
+            # for k in heap.keys():
+            #      if heap[k].logprob < front_item.logprob - bound_width:
+            #         del heap[k]
 
             for h in sorted(heap.itervalues(),key=lambda h: -h.logprob)[:opts.s]: # prune
                 fopen = prefix1bits(h.coverage)
@@ -81,11 +81,9 @@ def main():
 
                                     # add to heap
                                     num = onbits(coverage)
-                                    if lm_state in heaps[num] and stateeq(new_hypothesis, heaps[num][lm_state]):
-                                        if new_hypothesis.logprob > heaps[num][lm_state].logprob:
+                                    if lm_state not in heaps[num] or new_hypothesis.logprob > heaps[num][lm_state].logprob:
                                             heaps[num][lm_state] = new_hypothesis
-                                    else:
-                                        heaps[num][lm_state] = new_hypothesis
+
 
         winner = max(heaps[-1].itervalues(), key=lambda h: h.logprob)
         def extract_english(h): 
