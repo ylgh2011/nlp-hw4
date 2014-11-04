@@ -56,12 +56,12 @@ def main():
         heaps[0][lm.begin(), 0, 0] = initial_hypothesis
         for i, heap in enumerate(heaps[:-1]):
             # maintain beam heap
-            # front_item = sorted(heap.itervalues(), key=lambda h: -h.logprob)[0]
-            # for k in heap.keys():
-            #      if heap[k].logprob < front_item.logprob - opts.bwidth:
-            #         del heap[k]
+            front_item = sorted(heap.itervalues(), key=lambda h: -h.logprob)[0]
+            for k in heap.keys():
+                 if heap[k].logprob < front_item.logprob - opts.bwidth:
+                    del heap[k]
 
-            for h in sorted(heap.itervalues(),key=lambda h: -h.logprob)[:opts.s]: # prune
+            for h in sorted(heap.itervalues(),key=lambda h: -h.logprob): #[:opts.s]: # prune
                 fopen = prefix1bits(h.coverage)
                 for j in xrange(fopen,min(fopen+1+opts.disord, len(f)+1)):
                     for k in xrange(j+1, len(f)+1):
