@@ -2,6 +2,7 @@
 import optparse
 import sys
 import models
+import copy
 from collections import namedtuple
 
 optparser = optparse.OptionParser()
@@ -54,9 +55,9 @@ for f in french:
         if h.predecessor is not None:
             get_list(h.predecessor, output_list)
             output_list.append(h.phrase.english)
-    def get_prob():
+    def get_prob(test_list):
         stance = []
-        for i in eng_list:
+        for i in test_list:
             stance += (i.split())
         stance = tuple(stance)
         lm_state = (stance[0],)
@@ -67,14 +68,34 @@ for f in french:
         return score
     get_list(winner, eng_list)
     eng_list.append("</s>")
-    for h in range(10):
+    while True:
+        no_change = True
+        # insert
+        for i in range(1,len(eng_list)-1):
+            for j in range(1, i):
+                now_list = copy.deepcopy(eng_list)
+                now_list.pop(i)
+                now_list.insert(j, eng_list[i])
+                if get_prob(now_list) > get_prob(eng_list):
+                    no_change = False
+                    eng_list = now_list
+            for j in range(i+2, len(eng_list)-1):
+                now_list = copy.deepcopy(eng_list)
+                now_list.insert(j, eng_list[i])
+                now_list.pop(i)
+                if get_prob(now_list) > get_prob(eng_list):
+                    no_change = False
+                    eng_list = now_list
+        # swap
         for i in range(1,len(eng_list)-2):
             for j in range(i+1,len(eng_list)-1):
-                origin_prob = get_prob()
-                eng_list[i], eng_list[j] = eng_list[j], eng_list[i]
-                new_prob = get_prob()
-                if new_prob <= origin_prob:
-                    eng_list[i], eng_list[j] = eng_list[j], eng_list[i]
+                now_list = copy.deepcopy(eng_list)
+                now_list[i], now_list[j] = now_list[j], now_list[i]
+                if get_prob(now_list) > get_prob(eng_list):
+                    no_change = False
+                    eng_list = now_list
+        if no_change:
+            break
     for i in eng_list[1:-1]:
         print i,
     print
