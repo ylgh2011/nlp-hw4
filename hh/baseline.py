@@ -53,7 +53,7 @@ def main():
     for idx,f in enumerate(french):
         initial_hypothesis = hypothesis(lm.begin(), 0.0, 0, 0, None, None)
         heaps = [{} for _ in f] + [{}]
-        heaps[0][lm.begin()] = initial_hypothesis
+        heaps[0][lm.begin(), 0, 0] = initial_hypothesis
         for i, heap in enumerate(heaps[:-1]):
             # maintain beam heap
             # front_item = sorted(heap.itervalues(), key=lambda h: -h.logprob)[0]
@@ -81,8 +81,8 @@ def main():
 
                                     # add to heap
                                     num = onbits(coverage)
-                                    if lm_state not in heaps[num] or new_hypothesis.logprob > heaps[num][lm_state].logprob:
-                                            heaps[num][lm_state] = new_hypothesis
+                                    if (lm_state, coverage, k) not in heaps[num] or new_hypothesis.logprob > heaps[num][lm_state, coverage, k].logprob:
+                                            heaps[num][lm_state, coverage, k] = new_hypothesis
 
 
         winner = max(heaps[-1].itervalues(), key=lambda h: h.logprob)
