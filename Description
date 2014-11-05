@@ -1,0 +1,43 @@
+# Overall desciption
+
+Our algorithm can be summarized as using beam search with greedy optimization
+
+# Main Algorithm 
+ * Beam Search:
+     Based on the defaulty method, define the α* to be the highest score for all the state.
+     and define a beta > 0 to be the beam-width(specified by -w)
+     therefore beam function will be 
+        beam(Q) = { q ∈ Q : α(q) ≥ α* − β}
+
+
+#Optimization 
+
+Partial Greedy
+
+
+# Usage: 
+* Command line: python bidirectional_intersection_with_heurustic.py [options]
+* Options:
+      -h, --help            show this help message and exit
+      -i INPUT, --input=INPUT
+                            File containing sentences to translate
+                            (default=data/input)
+      -t TM, --translation-model=TM
+                            File containing translation model (default=data/tm)
+      -l LM, --language-model=LM
+                            File containing ARPA-format language model
+                            (default=data/lm)
+      -n NUM_SENTS, --num_sentences=NUM_SENTS
+                            Number of sentences to decode (default=no limit)
+      -k K, --translations-per-phrase=K
+                            Limit on number of translations to consider per phrase
+                            (default=1)
+      -s S, --heap-size=S   Maximum heap size (default=1)
+      -d DISORD, --disorder=DISORD
+                            Disorder limit (default=6)
+      -w BWIDTH, --beam width=BWIDTH
+                            beamwidth
+      -e ETA, --eta=ETA     distortion penalty parameter variable
+      -a ALPHA, --alpha=ALPHA
+                            weight for language model
+      -b BETA, --beta=BETA  weight for translation model
