@@ -17,9 +17,10 @@ optparser.add_option("-w", "--beam width", dest="bwidth", default=5.0,  help="be
 optparser.add_option("-e", "--eta", dest="eta", default=-2.0, type="float",  help="distortion penalty parameter variable")
 optparser.add_option("-a", "--alpha", dest="alpha", default=1.0, type="float", help="weight for language model")
 optparser.add_option("-b", "--beta", dest="beta", default=1.0, type="float", help="weight for translation model")
+optparser.add_option("-m", "--mute", dest="mute", default=0, type="int", help="mute the output")
 opts = optparser.parse_args()[0]
-tm = models.TM(opts.tm, opts.k)
-lm = models.LM(opts.lm)
+tm = models.TM(opts.tm, opts.k, opts.mute)
+lm = models.LM(opts.lm, opts.mute)
 french = [tuple(line.strip().split()) for line in open(opts.input).readlines()[:opts.num_sents]]
 bound_width = float(opts.bwidth)
 hypothesis = namedtuple("hypothesis", "lm_state, logprob, coverage, end, predecessor, phrase")
@@ -50,7 +51,8 @@ def main():
             tm[(word,)] = [models.phrase(word, 0.0)]
 
     total_prob = 0
-    sys.stderr.write("Decoding %s...\n" % (opts.input,))
+    if opts.mute == 0:
+        sys.stderr.write("Decoding %s...\n" % (opts.input,))
     for idx,f in enumerate(french):
         initial_hypothesis = hypothesis(lm.begin(), 0.0, 0, 0, None, None)
         heaps = [{} for _ in f] + [{}]
@@ -105,38 +107,47 @@ def main():
             return score
         get_list(winner, eng_list)
         eng_list.append("</s>")
+
+        if opts.mute == 0:
+            sys.stderr.write("Start local search ...\n")
+
         while True:
-            no_change = True
+            best_list = copy.deepcopy(eng_list)
+            
             # insert
             for i in range(1,len(eng_list)-1):
                 for j in range(1, i):
                     now_list = copy.deepcopy(eng_list)
                     now_list.pop(i)
                     now_list.insert(j, eng_list[i])
-                    if get_prob(now_list) > get_prob(eng_list):
-                        no_change = False
-                        eng_list = now_list
+                    if get_prob(now_list) > get_prob(best_list):
+                        best_list = now_list
+
                 for j in range(i+2, len(eng_list)-1):
                     now_list = copy.deepcopy(eng_list)
                     now_list.insert(j, eng_list[i])
                     now_list.pop(i)
-                    if get_prob(now_list) > get_prob(eng_list):
-                        no_change = False
-                        eng_list = now_list
+                    if get_prob(now_list) > get_prob(best_list):
+                        best_list = now_list
             # swap
             for i in range(1,len(eng_list)-2):
                 for j in range(i+1,len(eng_list)-1):
                     now_list = copy.deepcopy(eng_list)
                     now_list[i], now_list[j] = now_list[j], now_list[i]
-                    if get_prob(now_list) > get_prob(eng_list):
-                        no_change = False
-                        eng_list = now_list
-            if no_change:
+                    if get_prob(now_list) > get_prob(best_list):
+                        best_list = now_list
+            
+            if get_prob(best_list) == get_prob(eng_list):
                 break
+            else:
+                eng_list = best_list
+
         for i in eng_list[1:-1]:
             print i,
         print
-        sys.stderr.write("#{0}:{2} - {1}\n".format(idx, eng_list , get_prob(eng_list)))
+
+        if opts.mute == 0:
+            sys.stderr.write("#{0}:{2} - {1}\n".format(idx, eng_list , get_prob(eng_list)))
 
 if __name__ == "__main__":
     main()

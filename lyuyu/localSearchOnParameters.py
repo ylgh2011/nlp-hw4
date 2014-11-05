@@ -4,14 +4,18 @@ import optparse
 import copy
 from subprocess import call
 
-steps = {
-	'-a': 0.1,
-	'-b': 0.1,
+steps = {}
+
+initPara = {
+	'-a': 1.0,
+	'-b': 1.0,
+	'-s': 100,
+	'-k': 20,
+	'-d': 10
 }
 
 decoder = 'baseline.py'
 scorer = 'score-decoder.py'
-logFileName = 'localSearch_log.log.ignore'
 
 
 def getNeighbors(state):
@@ -20,65 +24,110 @@ def getNeighbors(state):
 		state[item] += steps[item];
 		neis.append(copy.deepcopy(state))
 		state[item] -= steps[item];
+		
 		state[item] -= steps[item];
 		neis.append(copy.deepcopy(state))
 		state[item] += steps[item];
+
+		state[item] += steps[item] * 2;
+		neis.append(copy.deepcopy(state))
+		state[item] -= steps[item] * 2;
+
+		state[item] -= steps[item] * 2;
+		neis.append(copy.deepcopy(state))
+		state[item] += steps[item] * 2;
+
+		state[item] += steps[item] * 4;
+		neis.append(copy.deepcopy(state))
+		state[item] -= steps[item] * 4;
+
+		state[item] -= steps[item] * 4;
+		neis.append(copy.deepcopy(state))
+		state[item] += steps[item] * 4;
+
 	return neis
 
 
+stateScore = {}
 def getScore(state):
-	command = 'python ' + decoder + ' -i data/input2 '
+	stateTuple = tuple(state.keys() + state.values())
+	if stateTuple in stateScore:
+		print str(stateTuple) + ' already exist: ' + str(stateScore[stateTuple])
+		return stateScore[stateTuple]
+	
+
+	command = 'python ' + decoder + ' -i data/input --mute 1 '
 	for key in state:
 		command += key + ' ' + str(state[key]) + ' '
-	command += '| python ' + scorer + ' -i data/input2 > tempLog.ignore'
+	command += '| python ' + scorer + ' -i data/input > tempLog.ignore'
 	print '#############################################################################'
-	print '############################## getScore #####################################'
+	print '############################## inside getScore() ############################'
 	print command
 	os.system(command)
 
+	score = 0
 	symbolSentence = 'Total corpus log probability (LM+TM):'
 	with file('tempLog.ignore') as f:
 		for line in f.readlines():
 			if line[0:len(symbolSentence)] == symbolSentence:
-				return float(line.split()[5])
+				score = float(line.split()[5])
+				stateScore[stateTuple] = score
+				break
 
 	os.system('rm tempLog.ignore')
-	return 0
+	return score
 
 
-def writeToLog(s):
+def writeToLog(logFileName, s):
 	with open(logFileName, 'a+') as f:
 		f.write(s + '\n')
+
+def fillInPair(dic, item):
+	kv = item.split(':')
+	try:
+		dic[kv[0]] = int(kv[1])
+	except ValueError:
+		dic[kv[0]] = float(kv[1])
 
 
 def main():
 	optparser = optparse.OptionParser()
-	optparser.add_option("-d", "--decoder", dest="decoder", default="baseline.py", help="Python script to decode")
-	optparser.add_option("-s", "--scorer", dest="scorer", default="score-decoder.py", help="Python script to evaluate the output")
+	optparser.add_option("-l", "--log", dest="log", default="localSearch_log.ignore", help="log to store the output")
+	optparser.add_option("-p", "--init_parameters", dest="init_parameters", default="-a:1.0,-b:1.0,-s:100,-k:20,-d:10", help="initial prarameters")
+	optparser.add_option("-t", "--steps", dest="steps", default="-a:0.1,-b:0.1", help="steps for dimensions of local search")
 	opts = optparser.parse_args()[0]
 
-	decoder = opts.decoder
-	scorer = opts.scorer
+	logFileName = opts.log
 
-	initPara = {
-		'-a': 1.1,
-		'-b': 1,
-		'-s': 100,
-		'-k': 30,
-		'-w': 10
-	}
+	# if os.path.isfile('stateScore.json'):
+	# 	with open('stateScore.json', 'r') as f:
+	# 		sc = json.loads(f)
+	# 		for key in sc:
+	# 			stateScore[key] = sc[key]
+
+	for item in opts.init_parameters.split(','):
+		fillInPair(initPara, item)
+
+	for item in opts.steps.split(','):
+		fillInPair(steps, item)
+	
+	print "logFileName: " + logFileName
+	print "initPara: " + str(initPara)
+	print "steps: " + str(steps)
+	print "stateScore: " + str(stateScore)
+	# exit()
 
 	curState = copy.deepcopy(initPara)
 	curScore = getScore(curState)
-	writeToLog("### Init CurState - Score:" + str(curScore) + ", State:" + str(curState))
+	writeToLog(logFileName, "### Init CurState - Score:" + str(curScore) + ", State:" + str(curState))
 	while True:
 		bestState = copy.deepcopy(curState)
 		bestScore = curScore
 
 		for neiState in getNeighbors(curState):
 			neiScore = getScore(neiState)
-			writeToLog("### Neighbor - Score:" + str(neiScore) + ", State:" + str(neiState))
-			if neiScore > bestScore:
+			writeToLog(logFileName, "### Neighbor - Score:" + str(neiScore) + ", State:" + str(neiState))
+			if neiScore >= bestScore:
 				bestState = copy.deepcopy(neiState)
 				bestScore = neiScore
 
@@ -87,9 +136,13 @@ def main():
 		else:
 			curState = copy.deepcopy(bestState)
 			curScore = bestScore
-			writeToLog("### Update CurState - Score:" + str(curScore) + ", State:" + str(curState))
+			writeToLog(logFileName, "### Update CurState - Score:" + str(curScore) + ", State:" + str(curState))
 
-	writeToLog("### Last CurState - Score:" + str(curScore) + ", State:" + str(curState))
+	writeToLog(logFileName, "### Last CurState - Score:" + str(curScore) + ", State:" + str(curState))
+	writeToLog(logFileName, "$ stateScore: " + str(stateScore))
+
+	# with open('stateScore.json', 'w') as f:
+	# 	f.write(json.dumps(stateScore))
 
 if __name__ == "__main__":
     main()
