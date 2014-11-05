@@ -13,7 +13,10 @@ Our algorithm can be summarized as using beam search with greedy optimization
 #Optimization 
 
 Partial Greedy
-
+    Uses two methods, insert and swap, to rearrange the order of the output sentences.
+    For every step, if the score after the operation is better than the origional result, we save the new states.
+    So the result will get better in each step and finally we will get a higher score.
+    But the result may not be optimal because it may be stuck in the local maximum.
 
 # Usage: 
 * Command line: python bidirectional_intersection_with_heurustic.py [options]
