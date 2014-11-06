@@ -50,6 +50,8 @@ def getNeighbors(state):
 
 stateScore = {}
 def getScore(state):
+	print '#############################################################################'
+	print '############################## inside getScore() ############################'
 	stateTuple = tuple(state.keys() + state.values())
 	if stateTuple in stateScore:
 		print str(stateTuple) + ' already exist: ' + str(stateScore[stateTuple])
@@ -60,8 +62,6 @@ def getScore(state):
 	for key in state:
 		command += key + ' ' + str(state[key]) + ' '
 	command += '| python ' + scorer + ' -i data/input > tempLog.ignore'
-	print '#############################################################################'
-	print '############################## inside getScore() ############################'
 	print command
 	os.system(command)
 
